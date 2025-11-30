@@ -6,17 +6,18 @@ set -o pipefail
 # --- CONFIGURATION ---
 DB_HOST="localhost"
 DB_PORT="5432"
-DB_NAME="0830tero_archive"
+DB_NAME="Test_Table"
 DB_USER="postgres"
 DB_PASS="0206"
 
 TARGET_SCHEMA="public"
+MAIN_LIMIT = 100000
 
 # TABLE LIST
 declare -a MIGRATION_TARGETS=(
     # Table Name: Column Name : Bucket Limit
-    "custom_module_data : customer_id : 100000"
-    "custom_module_equipment_map : cm_id : 100000"
+    "custom_module_data : customer_id : ${MAIN_LIMIT}"
+    "custom_module_equipment_map : cm_id : ${MAIN_LIMIT}"
 );
 
 # --- [2] SYSTEM SETTINGS ---

@@ -3,39 +3,39 @@
 set -e
 set -o pipefail
 
-# --- CONFIGURATION ---
+
 DB_HOST="localhost"
 DB_PORT="5432"
-DB_NAME="Test_Table"
+DB_NAME="Test_DB"
 DB_USER="postgres"
 DB_PASS="0206"
 
 TARGET_SCHEMA="public"
-MAIN_LIMIT="100000"
+MAIN_LIMIT=100000
 
 # TABLE LIST
 declare -a MIGRATION_TARGETS=(
     # Table Name: Column Name : Bucket Limit
     "custom_module_data : customer_id : ${MAIN_LIMIT}"
-    "custom_module_equipment_map : cm_id : ${MAIN_LIMIT}"
+    # "custom_module_equipment_map : cm_id : ${MAIN_LIMIT}"
 );
 
-# --- [2] SYSTEM SETTINGS ---
+
 if [ -n "$DB_PASS" ]; then
     export PGPASSWORD="$DB_PASS"
 fi
 export PGOPTIONS='-c client_min_messages=warning'
 
-# Colors (ANSI - Bright/Light variants for better visibility)
+
 RESET='\033[0m'
 BOLD='\033[1m'
-RED='\033[91m'      # Bright Red
-GREEN='\033[92m'    # Bright Green
-BLUE='\033[94m'     # Bright Blue
-MAGENTA='\033[95m'  # Bright Magenta
-CYAN='\033[96m'     # Bright Cyan
-WHITE='\033[97m'    # Bright White
-YELLOW='\033[93m'   # Bright Yellow
+RED='\033[91m'
+GREEN='\033[92m'
+BLUE='\033[94m' 
+MAGENTA='\033[95m' 
+CYAN='\033[96m'    
+WHITE='\033[97m'   
+YELLOW='\033[93m'  
 
 
 
@@ -466,8 +466,13 @@ BEGIN
         JOIN pg_class c ON c.oid = i.indexrelid
         WHERE indrelid = '${TARGET_SCHEMA}.$BACKUP_TBL'::regclass AND NOT indisprimary
     LOOP
-        v_idx_def := REPLACE(v_idx_rec.def, '$BACKUP_TBL', '$TBL');
-        v_idx_def := REGEXP_REPLACE(v_idx_def, 'INDEX (\\\\S+)', 'INDEX \\\\1_part');
+        -- 1. Replace Table Name (Robust against quoting)
+        -- We use quote_ident to match exactly how Postgres formats the table name in the definition
+        v_idx_def := REPLACE(v_idx_rec.def, quote_ident('$BACKUP_TBL'), quote_ident('$TBL'));
+        
+        -- 2. Rename Index (Append _part)
+        -- We replace the specific index name to avoid regex issues with quotes
+        v_idx_def := REPLACE(v_idx_def, 'INDEX ' || quote_ident(v_idx_rec.name), 'INDEX ' || quote_ident(v_idx_rec.name || '_part'));
 
         BEGIN
             EXECUTE v_idx_def;
